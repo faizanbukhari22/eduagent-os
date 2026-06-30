@@ -12,9 +12,8 @@ async def run_educational_pipeline(input_source: str):
     # 1. Fetch the media file locally or via remote download
     audio_path = process_input_source(input_source)
     
-    # 2. Local transcription using faster-whisper
-    segments = transcribe_audio_file(audio_path)
-    raw_transcript_text = "\n".join([f"[{s['start']:.1f}s - {s['end']:.1f}s]: {s['text']}" for s in segments])
+    # 2. Local transcription using faster-whisper (Returns pre-formatted string payload)
+    raw_transcript_text = transcribe_audio_file(audio_path)
     
     # Cache the raw transcript to the workspace volume
     transcript_log_path = "/app/workspace/transcript.txt"
@@ -66,8 +65,8 @@ async def run_educational_pipeline(input_source: str):
     print("[Orchestrator] Activating semantic and structural verification layer...")
     
     eval_prompt = (
-        f"Critically assess the generated study notes and flashcards against the original transcript. "
-        f"Audit for factual inconsistencies, omissions, or ungrounded claims.\n\n"
+        "Critically assess the generated study notes and flashcards against the original transcript. "
+        "Audit for factual inconsistencies, omissions, or ungrounded claims.\n\n"
         f"Original Transcript:\n{raw_transcript_text}\n\n"
         f"Generated Notes:\n{notes_response.text}\n\n"
         f"Generated Flashcards:\n{flash_response.text}"
@@ -82,6 +81,9 @@ async def run_educational_pipeline(input_source: str):
             response_schema=LectureEvaluation,
         ),
     )
+
+    with open("/app/workspace/evaluation.json", "w") as f:
+        f.write(verification_response.text)
 
     print(f"\n[Evaluation Report Results]:\n{verification_response.text}")
     print("\n[Orchestrator] Execution finished successfully.")
